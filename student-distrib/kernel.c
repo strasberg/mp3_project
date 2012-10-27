@@ -12,6 +12,8 @@
 #include "idthandlers.h"
 #include "paging.h"
 
+#include "terminal.h"
+
 /* Macros. */
 /* Check if the bit BIT in FLAGS is set. */
 #define CHECK_FLAG(flags,bit)   ((flags) & (1 << (bit)))
@@ -23,8 +25,8 @@ entry (unsigned long magic, unsigned long addr)
 {
 	multiboot_info_t *mbi;
 
-	/* Clear the screen. */
-	clear();
+	/* Initialize the screen. */
+	screen_init();
 
 	/* Am I booted by a Multiboot-compliant boot loader? */
 	if (magic != MULTIBOOT_BOOTLOADER_MAGIC)
@@ -272,9 +274,12 @@ entry (unsigned long magic, unsigned long addr)
 	printf("Enabling Interrupts\n");
 	sti();
 
+	/* This will be replaced by a system call after CP3 */
+	terminal_open();
+	
 	while(1)
 	{
-	
+		
 	}
 	/* Execute the first program (`shell') ... */
 	/* Spin (nicely, so we don't chew up cycles) */

@@ -5,7 +5,8 @@
 #include "lib.h"
 #include "i8259.h"
 #include "idthandlers.h"
-
+#include "terminal.h"
+#include "types.h"
 
 /* Exception Handlers */
 void divide_error()
@@ -169,8 +170,11 @@ void keyboard()
 	cli();
 	send_eoi(1);
 	temp=inb(0x60);
+	keyboard_input(temp);
 	sti();
-	printf("Keyboard Interrupt; Key Pressed %x\n",temp);
+	//printf("Keyboard Interrupt; Key Pressed %x\n",temp);
+	//stuff();
+	//terminal_write((uint8_t*)temp,1);
 }
 void rt_clock()
 {
@@ -180,7 +184,8 @@ void rt_clock()
 	outb(0x8C,0x70);
 	inb(0x71);
 	sti();
-	printf("Real Time Clock Interrupt\n");	
+	//printf("Real Time Clock Interrupt\n");	
+	//terminal_write((uint8_t*)"test ",5);
 }
 funcarray irqhandlers[]=
 {

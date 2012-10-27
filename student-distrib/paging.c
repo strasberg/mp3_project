@@ -22,23 +22,28 @@ void paging_init()
 
 	for(i=0; i<1024; i++)
 	{
-		page_directory[i] = (uint32_t)address; //makes all pages r and not present
+		page_directory[i] = (uint32_t)(address | 2); //makes all pages r/w and not present
 		address += 0x400000; //4mb
 
-		table_entry[i] = (uint32_t)table_addr; //set pages to r and not present
+		table_entry[i] = (uint32_t)(table_addr | 2); //set pages to r/w
 		table_addr += 0x1000;//4kb
 	}
-		
+	
+	table_entry[0] = 0; /*make first page null*/
+	
 	/*set present memory to present*/
-	table_entry[1] |= 1; 
-	table_entry[2] |= 1;
-	table_entry[0xB8] |= 1;
+	table_entry[1] |= 3; 
+	table_entry[2] |= 3;
+	
+	table_entry[0xB8] |= 3;
+	for(i = 0x100; i < 0x400; i++)
+		table_entry[i] |= 3;
 	
 
-	page_directory[0] = (uint32_t)table_entry | 1; //show first 4mb exist
+	page_directory[0] = (uint32_t)table_entry | 3; //show first 4mb exist
 
 	/*set up kernel paging*/
-	page_directory[1] = (uint32_t)(0x400000 | 0x81); //sets page size to 4mb , r/w and present
+	page_directory[1] = (uint32_t)(0x400000 | 0x83); //sets page size to 4mb , r/w and present
 
 
 
