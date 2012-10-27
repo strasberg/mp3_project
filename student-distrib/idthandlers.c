@@ -166,12 +166,13 @@ void timer_chip()
 void keyboard()
 {
 	//clear();
-	int temp;
+	uint16_t temp;
 	cli();
+	temp=inw(0x60);
 	send_eoi(1);
-	temp=inb(0x60);
-	keyboard_input(temp);
 	sti();
+	keyboard_input(temp);
+
 	//printf("Keyboard Interrupt; Key Pressed %x\n",temp);
 	//stuff();
 	//terminal_write((uint8_t*)temp,1);

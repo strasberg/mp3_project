@@ -67,7 +67,7 @@ scroll(int offset)
 {
 	if(screen_offset + offset < 0)
 		return;
-	if(screen_offset >= cursor_y)
+	if(screen_offset + offset > cursor_y)
 		return;
 	
 	screen_offset += offset;

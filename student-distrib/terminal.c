@@ -10,7 +10,7 @@ static uint8_t buffer[1024];
 static int16_t line_pos;
 
 static volatile int8_t enter_pressed;
-
+static int8_t shift;
 
 /* 
  * terminal_open
@@ -24,6 +24,7 @@ int32_t
 terminal_open()
 {
 	line_pos = 0;
+	shift = 0;
 	return 0;
 }
 
@@ -51,13 +52,13 @@ terminal_read(uint8_t* buf, int32_t cnt)
 int32_t
 terminal_write(const uint8_t* buf, int32_t cnt)
 {
-	int8_t s[cnt + 1];
+	int8_t s[1024];
+	
 	int i;
 	for(i = 0; i < cnt; i++)
 		s[i] = buf[i];
 	s[cnt] = '\0';
-	//cursor_x += cnt;
-	//cursor_y = 
+
 	return puts(s);
 }
 
@@ -115,12 +116,29 @@ static uint8_t kbdus[128] =
 void
 keyboard_input(uint16_t key)
 {
+	printf("%x\n",key);
 	const uint8_t kbd_data = kbdus[key];
-	if(kbd_data == 'w')
+	switch(key) {
+		case 0x48:
 		scroll(-1);
-	if(kbd_data == 's')
+		return;
+		
+		case 0x50:
 		scroll(1);
-	terminal_write(&kbd_data,1);
+		return;
+		
+		case 0x2A:
+		shift = 1;
+		return;
+		
+		case 0xAA:
+		shift = 0;
+		return;
+		
+	}
+	
+	//if(kbd_data != 0)
+		//terminal_write(&kbd_data,1);
 }
 
 
