@@ -12,6 +12,6 @@ extern int32_t terminal_write(const uint8_t* buf, int32_t cnt);
 /* Does nothing, returns 0. */
 extern int32_t terminal_close();
 /* Translates keyboard input into letters and calls terminal_write. */
-extern void keyboard_input(uint16_t key);
+extern void keyboard_input(uint8_t key);
 
 #endif

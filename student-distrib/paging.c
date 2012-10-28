@@ -43,7 +43,7 @@ void paging_init()
 	page_directory[0] = (uint32_t)table_entry | 3; //show first 4mb exist
 
 	/*set up kernel paging*/
-	page_directory[1] = (uint32_t)(0x400000 | 0x83); //sets page size to 4mb , r/w and present
+	page_directory[1] = (uint32_t)(0x400000 | 0x81); //sets page size to 4mb , r/w and present
 
 
 

@@ -96,6 +96,7 @@ void general_protection()
 void page_fault()
 {
 	cli();
+	BSOD();
 	printf("Page Fault Exception\n");
 	while(1);
 }
@@ -166,12 +167,13 @@ void timer_chip()
 void keyboard()
 {
 	//clear();
-	uint16_t temp;
+	uint8_t temp;
 	cli();
-	temp=inw(0x60);
+	temp=inb(0x60);
+	//printf(" temp = %x ",temp);
+	keyboard_input(temp);
 	send_eoi(1);
 	sti();
-	keyboard_input(temp);
 
 	//printf("Keyboard Interrupt; Key Pressed %x\n",temp);
 	//stuff();

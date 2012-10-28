@@ -73,7 +73,7 @@ terminal_close()
 *  comments in to give you an idea of what key is what, even
 *  though I set it's array index to 0. You can change that to
 *  whatever you want using a macro, if you wish! */
-static uint8_t kbdus[128] =
+static uint8_t chars[128] =
 {
     0,  27, '1', '2', '3', '4', '5', '6', '7', '8',	/* 9 */
   '9', '0', '-', '=', '\b',	/* Backspace */
@@ -113,12 +113,53 @@ static uint8_t kbdus[128] =
     0,	/* All other keys are undefined */
 };		
 
-void
-keyboard_input(uint16_t key)
+static uint8_t shift_chars[128] =
 {
-	printf("%x\n",key);
-	const uint8_t kbd_data = kbdus[key];
+    0,  27, '!', '@', '#', '$', '%', '^', '&', '*',	/* 9 */
+  '(', ')', '_', '+', 0,	/* Backspace */
+  0,			/* Tab */
+  'Q', 'W', 'E', 'R',	/* 19 */
+  'T', 'Y', 'U', 'I', 'O', 'P', '{', '}', 0,	/* Enter key */
+    0,			/* 29   - Control */
+  'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ':',	/* 39 */
+ '"', '~',   0,		/* Left shift */
+ '|', 'Z', 'X', 'C', 'V', 'B', 'N',			/* 49 */
+  'M', '<', '>', '?',   0,				/* Right shift */
+  '*',
+    0,	/* Alt */
+  ' ',	/* Space bar */
+    0,	/* Caps lock */
+    0,	/* 59 - F1 key ... > */
+    0,   0,   0,   0,   0,   0,   0,   0,
+    0,	/* < ... F10 */
+    0,	/* 69 - Num lock*/
+    0,	/* Scroll Lock */
+    0,	/* Home key */
+    0,	/* Up Arrow */
+    0,	/* Page Up */
+  '-',
+    0,	/* Left Arrow */
+    0,
+    0,	/* Right Arrow */
+  '+',
+    0,	/* 79 - End key*/
+    0,	/* Down Arrow */
+    0,	/* Page Down */
+    0,	/* Insert Key */
+    0,	/* Delete Key */
+    0,   0,   0,
+    0,	/* F11 Key */
+    0,	/* F12 Key */
+    0,	/* All other keys are undefined */
+};		
+
+void
+keyboard_input(uint8_t key)
+{
+	//printf("%x ",key);
+
 	switch(key) {
+	/*
 		case 0x48:
 		scroll(-1);
 		return;
@@ -126,7 +167,7 @@ keyboard_input(uint16_t key)
 		case 0x50:
 		scroll(1);
 		return;
-		
+	*/
 		case 0x2A:
 		shift = 1;
 		return;
@@ -135,10 +176,50 @@ keyboard_input(uint16_t key)
 		shift = 0;
 		return;
 		
+		case 0x36:
+		shift = 1;
+		return;
+		
+		case 0xB6:
+		shift = 0;
+		return;
 	}
 	
-	//if(kbd_data != 0)
-		//terminal_write(&kbd_data,1);
+	uint8_t kbd_data;
+	
+	if(shift)
+		kbd_data = shift_chars[key];
+	else
+		kbd_data = chars[key];
+		
+	if((0x80 & key) != 0)
+		return;
+		
+	if(kbd_data == 27)
+		clear();
+		
+	switch(kbd_data) {
+		case 'w':
+		scroll(-1);
+		return;
+		
+		case 's':
+		scroll(1);
+		return;
+	}
+		
+	if(kbd_data != 0) {
+		putc(kbd_data);
+		if(kbd_data == '\b') {
+			line_pos--;
+		} else if(kbd_data == '\n') {
+			buffer[line_pos] = '\n';
+			enter_pressed = 1;
+		} else {
+			buffer[line_pos] = kbd_data;
+			line_pos++;
+		}
+	}
 }
 
 

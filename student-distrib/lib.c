@@ -7,7 +7,7 @@
 #define SAVED_VIDEO 0x100000
 #define NUM_COLS 80
 #define NUM_ROWS 25
-#define ATTRIB 0x2
+#define ATTRIB 0x20
 
 static uint32_t cursor_x;
 static uint32_t cursor_y;
@@ -16,22 +16,15 @@ static char* saved_video_mem = (char *)SAVED_VIDEO;
 static int32_t screen_offset;
 
 
-void
-clear(void)
-{
-	cursor_x = 0;
-	cursor_y++;
-	screen_offset = cursor_y;
 
-    int32_t i;
+void
+BSOD()
+{
+	int32_t i;
     for(i=0; i<NUM_ROWS*NUM_COLS; i++) {
         *(uint8_t *)(video_mem + (i << 1)) = ' ';
-        *(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB;
-		*(uint8_t *)(saved_video_mem + ((NUM_COLS*screen_offset + i) << 1)) = ' ';
-        *(uint8_t *)(saved_video_mem + ((NUM_COLS*screen_offset + i) << 1) + 1) = ATTRIB;
-    }
-	
-
+        *(uint8_t *)(video_mem + (i << 1) + 1) = 0x10;
+	}
 }
 
 void
@@ -60,6 +53,34 @@ int
 screen_y()
 {
 	return cursor_y - screen_offset;
+}
+
+void
+clear(void)
+{
+    int32_t i;
+
+	for(i=cursor_x; i<NUM_COLS; i++) {
+		if(screen_y() < NUM_ROWS) {
+			*(uint8_t *)(video_mem + ((NUM_COLS*screen_y() + i) << 1)) = ' ';
+			*(uint8_t *)(video_mem + ((NUM_COLS*screen_y() + i) << 1) + 1) = ATTRIB;
+		}
+		*(uint8_t *)(saved_video_mem + ((NUM_COLS*cursor_y + i) << 1)) = ' ';
+		*(uint8_t *)(saved_video_mem + ((NUM_COLS*cursor_y + i) << 1) + 1) = ATTRIB;
+	}
+
+	cursor_x = 0;
+	cursor_y++;
+	screen_offset = cursor_y;
+
+    for(i=0; i<NUM_ROWS*NUM_COLS; i++) {
+        *(uint8_t *)(video_mem + (i << 1)) = ' ';
+        *(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB;
+		*(uint8_t *)(saved_video_mem + ((NUM_COLS*screen_offset + i) << 1)) = ' ';
+        *(uint8_t *)(saved_video_mem + ((NUM_COLS*screen_offset + i) << 1) + 1) = ATTRIB;
+    }
+	
+
 }
 
 void
@@ -230,12 +251,26 @@ puts(int8_t* s)
 void
 putc(uint8_t c)
 {
+	int i;
+
     if(c == '\n' || c == '\r') {
+	
+		for(i=cursor_x; i<NUM_COLS; i++) {
+			if(screen_y() < NUM_ROWS) {
+				*(uint8_t *)(video_mem + ((NUM_COLS*screen_y() + i) << 1)) = ' ';
+				*(uint8_t *)(video_mem + ((NUM_COLS*screen_y() + i) << 1) + 1) = ATTRIB;
+			}
+			*(uint8_t *)(saved_video_mem + ((NUM_COLS*cursor_y + i) << 1)) = ' ';
+			*(uint8_t *)(saved_video_mem + ((NUM_COLS*cursor_y + i) << 1) + 1) = ATTRIB;
+		}
+	
         cursor_y++;
         cursor_x=0;
     } else {
-        *(uint8_t *)(video_mem + ((NUM_COLS*screen_y() + screen_x()) << 1)) = c;
-        *(uint8_t *)(video_mem + ((NUM_COLS*screen_y() + screen_x()) << 1) + 1) = ATTRIB;
+		if(screen_y() < NUM_ROWS) {
+			*(uint8_t *)(video_mem + ((NUM_COLS*screen_y() + screen_x()) << 1)) = c;
+			*(uint8_t *)(video_mem + ((NUM_COLS*screen_y() + screen_x()) << 1) + 1) = ATTRIB;
+		}
 		*(uint8_t *)(saved_video_mem + ((NUM_COLS*cursor_y + cursor_x) << 1)) = c;
         *(uint8_t *)(saved_video_mem + ((NUM_COLS*cursor_y + cursor_x) << 1) + 1) = ATTRIB;
         cursor_x++;
