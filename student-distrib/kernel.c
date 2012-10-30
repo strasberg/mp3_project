@@ -280,6 +280,14 @@ entry (unsigned long magic, unsigned long addr)
 	while(1)
 	{
 		
+		printf("Reading-> ");
+		uint8_t buf[1024];
+		int cnt = terminal_read(buf, 1024);
+		buf[cnt] = '\0';
+		puts ((uint8_t*)"Looks like you typed: ");
+		puts (buf);
+		putc('\n');
+		
 	}
 	/* Execute the first program (`shell') ... */
 	/* Spin (nicely, so we don't chew up cycles) */

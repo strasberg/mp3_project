@@ -7,41 +7,17 @@
 #define SAVED_VIDEO 0x100000
 #define NUM_COLS 80
 #define NUM_ROWS 25
-#define ATTRIB 0x20
 
+static uint8_t ATTRIB;
 static uint32_t cursor_x;
 static uint32_t cursor_y;
 static char* video_mem = (char *)VIDEO;
 static char* saved_video_mem = (char *)SAVED_VIDEO;
 static int32_t screen_offset;
+static uint8_t cursor_enabled;
+void update_color();
+void update_cursor();
 
-
-
-void
-BSOD()
-{
-	int32_t i;
-    for(i=0; i<NUM_ROWS*NUM_COLS; i++) {
-        *(uint8_t *)(video_mem + (i << 1)) = ' ';
-        *(uint8_t *)(video_mem + (i << 1) + 1) = 0x10;
-	}
-}
-
-void
-screen_init()
-{
-	cursor_x = 0;
-	cursor_y = 0;
-	screen_offset = 0;
-	
-	int32_t i;
-    for(i=0; i<NUM_ROWS*NUM_COLS; i++) {
-        *(uint8_t *)(video_mem + (i << 1)) = ' ';
-        *(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB;
-		*(uint8_t *)(saved_video_mem + (i << 1)) = ' ';
-        *(uint8_t *)(saved_video_mem + (i << 1) + 1) = ATTRIB;
-    }
-}
 
 int
 screen_x()
@@ -54,6 +30,104 @@ screen_y()
 {
 	return cursor_y - screen_offset;
 }
+
+/* Courtesy of http://wiki.osdev.org/Text_Mode_Cursor
+ * void update_cursor()
+ * by Dark Fiber
+ */
+void update_cursor()
+{
+	uint8_t cur_CSR;
+	if(screen_y() >= NUM_ROWS) {
+		if(cursor_enabled != 0) {
+			outb(0x0A, 0x3D4);
+			cur_CSR = inb(0x3D5);
+			outb(cur_CSR + 0x20, 0x3D5);
+			cursor_enabled = 0;
+		}
+		return;
+	}
+	
+	if(cursor_enabled == 0) {
+		outb(0x0A, 0x3D4);
+		cur_CSR = inb(0x3D5);
+		outb(cur_CSR - 0x20, 0x3D5);
+		cursor_enabled = 1;
+	}
+	
+	unsigned short position=(screen_y()*NUM_COLS) + screen_x();
+ 
+	// cursor LOW port to vga INDEX register
+	outb(0x0F, 0x3D4);
+	outb((unsigned char)(position&0xFF), 0x3D5);
+	// cursor HIGH port to vga INDEX register
+	outb(0x0E, 0x3D4);
+	outb((unsigned char )((position>>8)&0xFF), 0x3D5);
+}
+
+void
+screen_init()
+{
+	cursor_x = 0;
+	cursor_y = 0;
+	screen_offset = 0;
+	cursor_enabled = 1;
+	update_cursor();
+	ATTRIB = 0x2;
+	
+	int32_t i;
+    for(i=0; i<NUM_ROWS*NUM_COLS; i++) {
+        *(uint8_t *)(video_mem + (i << 1)) = ' ';
+        *(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB;
+    }
+	for(i=0; i<(0x400000-SAVED_VIDEO)/2; i++) {
+		*(uint8_t *)(saved_video_mem + (i << 1)) = ' ';
+        *(uint8_t *)(saved_video_mem + (i << 1) + 1) = ATTRIB;
+	}
+}
+
+
+void
+BSOD()
+{
+	int32_t i;
+    for(i=0; i<NUM_ROWS*NUM_COLS; i++) {
+        *(uint8_t *)(video_mem + (i << 1)) = ' ';
+        *(uint8_t *)(video_mem + (i << 1) + 1) = 0x10;
+	}
+	ATTRIB = 0x17;
+	cursor_y = screen_offset + 10;
+	cursor_x = 10;
+	puts("A total FU exception has occured at your location. All system");
+	cursor_y++;
+	cursor_x = 10;
+	puts("functionality will be terminated.");
+	cursor_y += 2;
+	cursor_x = 10;
+	puts("- ");
+	puts("Press any key to power cycle the system. If system does not");
+	cursor_y++;
+	cursor_x = 12;
+	puts("restart, scream at top of lungs and pound on keyboard.");
+	cursor_y++;
+	cursor_x = 10;
+	puts("- ");
+	puts("If you need to talk to a programmer press any other key.");
+	cursor_y += 2;
+	cursor_x = 26;
+	puts("Press any key to continue..");
+	cursor_y = screen_offset + 8;
+	cursor_x = 20;
+	ATTRIB = 0xF1;
+	
+	/* Disable cursor */
+	uint8_t cur_CSR;
+	outb(0x0A, 0x3D4);
+	cur_CSR = inb(0x3D5);
+	outb(cur_CSR + 0x20, 0x3D5);
+	cursor_enabled = 0;
+}
+
 
 void
 clear(void)
@@ -72,7 +146,7 @@ clear(void)
 	cursor_x = 0;
 	cursor_y++;
 	screen_offset = cursor_y;
-
+	update_cursor();
     for(i=0; i<NUM_ROWS*NUM_COLS; i++) {
         *(uint8_t *)(video_mem + (i << 1)) = ' ';
         *(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB;
@@ -99,6 +173,36 @@ scroll(int offset)
         *(uint8_t *)(video_mem + (i << 1) + 1) = 
 			*(uint8_t *)(saved_video_mem + ((NUM_COLS*screen_offset + i) << 1) + 1);
 	}
+	update_cursor();
+}
+
+
+void
+font_color() {
+	uint8_t color = ATTRIB & 0x7;
+	color = (color + 1) % 0x8;
+	ATTRIB &= 0xF8;
+	ATTRIB += color;
+	update_color();
+}
+
+void
+background_color() {
+	uint8_t color = (ATTRIB & 0x70) >> 4;
+	color = (color + 1) % 0x8;
+	ATTRIB &= 0x8F;
+	ATTRIB += (color << 4);
+	update_color();
+}
+
+void
+update_color() {
+	int32_t i;
+	
+	for(i=0; i<(0x400000-SAVED_VIDEO)/2; i++) {
+        *(uint8_t *)(saved_video_mem + (i << 1) + 1) = ATTRIB;
+	}
+	scroll(0);
 }
 
 /* Standard printf().
@@ -230,11 +334,6 @@ format_char_switch:
 	return (buf - format);
 }
 
-
-void stuff(){
-	printf("%x\n",saved_video_mem + (NUM_COLS*cursor_y<< 1));
-}
-
 /* Output a string to the console */
 int32_t
 puts(int8_t* s)
@@ -266,7 +365,22 @@ putc(uint8_t c)
 	
         cursor_y++;
         cursor_x=0;
-    } else {
+    } else if(c == '\b') {
+		if(cursor_x == 0) {
+			cursor_y--;
+			cursor_x = NUM_COLS - 1;
+		} else {
+			cursor_x--;
+		}
+		
+		if(screen_y() < NUM_ROWS) {
+			*(uint8_t *)(video_mem + ((NUM_COLS*screen_y() + screen_x()) << 1)) = ' ';
+			*(uint8_t *)(video_mem + ((NUM_COLS*screen_y() + screen_x()) << 1) + 1) = ATTRIB;
+		}
+		*(uint8_t *)(saved_video_mem + ((NUM_COLS*cursor_y + cursor_x) << 1)) = ' ';
+		*(uint8_t *)(saved_video_mem + ((NUM_COLS*cursor_y + cursor_x) << 1) + 1) = ATTRIB;
+		
+	} else {
 		if(screen_y() < NUM_ROWS) {
 			*(uint8_t *)(video_mem + ((NUM_COLS*screen_y() + screen_x()) << 1)) = c;
 			*(uint8_t *)(video_mem + ((NUM_COLS*screen_y() + screen_x()) << 1) + 1) = ATTRIB;
@@ -280,6 +394,8 @@ putc(uint8_t c)
 	
 	if(cursor_y > screen_offset + NUM_ROWS - 1)
 		scroll(cursor_y - (screen_offset - 1 + NUM_ROWS));
+	else
+		update_cursor();
 }
 
 /* Convert a number to its ASCII representation, with base "radix" */

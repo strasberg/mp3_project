@@ -11,6 +11,8 @@ static int16_t line_pos;
 
 static volatile int8_t enter_pressed;
 static int8_t shift;
+static int8_t caps_lock;
+static int8_t ctrl;
 
 /* 
  * terminal_open
@@ -25,6 +27,8 @@ terminal_open()
 {
 	line_pos = 0;
 	shift = 0;
+	caps_lock = 0;
+	ctrl = 0;
 	return 0;
 }
 
@@ -43,6 +47,7 @@ terminal_read(uint8_t* buf, int32_t cnt)
 	{
 		buf[i] = buffer[i];
 		rtn_cnt++;
+		i++;
 	}
 
 	line_pos = 0;
@@ -75,9 +80,9 @@ terminal_close()
 *  whatever you want using a macro, if you wish! */
 static uint8_t chars[128] =
 {
-    0,  27, '1', '2', '3', '4', '5', '6', '7', '8',	/* 9 */
+    0,  0, '1', '2', '3', '4', '5', '6', '7', '8',	/* 9 */
   '9', '0', '-', '=', '\b',	/* Backspace */
-  '\t',			/* Tab */
+  0,			/* Tab */
   'q', 'w', 'e', 'r',	/* 19 */
   't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\n',	/* Enter key */
     0,			/* 29   - Control */
@@ -115,11 +120,11 @@ static uint8_t chars[128] =
 
 static uint8_t shift_chars[128] =
 {
-    0,  27, '!', '@', '#', '$', '%', '^', '&', '*',	/* 9 */
+    0,  0, '!', '@', '#', '$', '%', '^', '&', '*',	/* 9 */
   '(', ')', '_', '+', 0,	/* Backspace */
   0,			/* Tab */
   'Q', 'W', 'E', 'R',	/* 19 */
-  'T', 'Y', 'U', 'I', 'O', 'P', '{', '}', 0,	/* Enter key */
+  'T', 'Y', 'U', 'I', 'O', 'P', '{', '}', '\n',	/* Enter key */
     0,			/* 29   - Control */
   'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', ':',	/* 39 */
  '"', '~',   0,		/* Left shift */
@@ -157,9 +162,17 @@ void
 keyboard_input(uint8_t key)
 {
 	//printf("%x ",key);
+	key &= 0xFF;
 
 	switch(key) {
-	/*
+		case 0x1D:
+		ctrl = 1;
+		return;
+		
+		case 0x9D:
+		ctrl = 0;
+		return;
+		
 		case 0x48:
 		scroll(-1);
 		return;
@@ -167,7 +180,11 @@ keyboard_input(uint8_t key)
 		case 0x50:
 		scroll(1);
 		return;
-	*/
+		
+		case 0x3A:
+		caps_lock = 1 - caps_lock;
+		return;
+	
 		case 0x2A:
 		shift = 1;
 		return;
@@ -183,42 +200,49 @@ keyboard_input(uint8_t key)
 		case 0xB6:
 		shift = 0;
 		return;
+		
+		case 0xF:
+		if(shift)
+			background_color();
+		else
+			font_color();
+		return;
 	}
 	
 	uint8_t kbd_data;
 	
-	if(shift)
+	if(shift || caps_lock)
 		kbd_data = shift_chars[key];
 	else
 		kbd_data = chars[key];
 		
-	if((0x80 & key) != 0)
-		return;
-		
-	if(kbd_data == 27)
-		clear();
-		
-	switch(kbd_data) {
-		case 'w':
-		scroll(-1);
-		return;
-		
-		case 's':
-		scroll(1);
+	if(ctrl) {
+		if(kbd_data == 'l') {
+			clear();
+			line_pos = 0;
+		}
 		return;
 	}
 		
+	if((0x80 & key) != 0)
+		return;
+	
 	if(kbd_data != 0) {
-		putc(kbd_data);
 		if(kbd_data == '\b') {
+			if(line_pos == 0)
+				return;
 			line_pos--;
 		} else if(kbd_data == '\n') {
 			buffer[line_pos] = '\n';
 			enter_pressed = 1;
+			line_pos = 0;
 		} else {
+			if(line_pos >= 1024)
+				return;
 			buffer[line_pos] = kbd_data;
 			line_pos++;
 		}
+		putc(kbd_data);
 	}
 }
 

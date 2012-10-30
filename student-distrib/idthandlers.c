@@ -12,92 +12,108 @@
 void divide_error()
 {
 	cli();
-	printf("Divide by Zero Exception\n");
+	BSOD();
+	printf("Divide by Zero Exception");
 	while(1);
 }
 void debug()
 {
 	cli();
-	printf("Debug Exception\n");
+	BSOD();
+	printf("Debug Exception");
 	while(1);
 }
 void nmi()
 {
 	cli();
-	printf("NMI Exception\n");
+	BSOD();
+	printf("NMI Exception");
 	while(1);
 }
 void int3()
 {
 	cli();
-	printf("Breakpoint Exception\n");
+	BSOD();
+	printf("Breakpoint Exception");
 	while(1);
 }
 void overflow()
 {
 	cli();
-	printf("Overflow Exception\n");
+	BSOD();
+	printf("Overflow Exception");
 	while(1);
 }
 void bounds()
 {
 	cli();
-	printf("Bounds Check Exception\n");
+	BSOD();
+	printf("Bounds Check Exception");
 	while(1);
 }
 void invalid_op()
 {
 	cli();
-	printf("Invalid Opcode Exception\n");
+	BSOD();
+	printf("Invalid Opcode Exception");
 	while(1);
 }
 void device_not_available()
 {
 	cli();
-	printf("Device not Available Exception\n");
+	BSOD();
+	printf("Device not Available Exception");
 	while(1);
 }
 void doublefault_fn()
 {
 	cli();
-	printf("Double Fault Exception\n");
+	BSOD();
+	printf("Double Fault Exception");
 	while(1);
 }
 void coprocessor_segment_overrun()
 {
 	cli();
-	printf("Coprocessor Segment Overrun Exception\n");
+	BSOD();
+	printf("Coprocessor Segment Overrun Exception");
 	while(1);
 }
 void invalid_TSS()
 {
 	cli();
-	printf("Invalid TSS\n");
+	BSOD();
+	printf("Invalid TSS");
 	while(1);
 }
 void segment_not_present()
 {
 	cli();
-	printf("Segment Not Present Exception\n");
+	BSOD();
+	printf("Segment Not Present Exception");
 	while(1);
 }
 void stack_segment()
 {
 	cli();
-	printf("Stack Segment Fault Exception\n");
+	BSOD();
+	printf("Stack Segment Fault Exception");
 	while(1);
 }
 void general_protection()
 {
 	cli();
-	printf("General Protection Exception\n");
+	BSOD();
+	printf("General Protection Exception");
 	while(1);
 }
 void page_fault()
 {
 	cli();
 	BSOD();
-	printf("Page Fault Exception\n");
+	int fault_address;
+	asm volatile("movl %%cr2, %%eax\n\t": "=a"(fault_address) : );
+	printf("PAGE FAULT EXCEPTION AT ADDRESS: 0x%x", fault_address);
 	while(1);
 }
 void none()
@@ -106,25 +122,29 @@ void none()
 void coprocessor_error()
 {
 	cli();
-	printf("Floating-Point Error Exception\n");
+	BSOD();
+	printf("Floating-Point Error Exception");
 	while(1);
 }
 void alignment_check()
 {
 	cli();
-	printf("Alignment Check Exception\n");
+	BSOD();
+	printf("Alignment Check Exception");
 	while(1);
 }
 void machine_check()
 {
 	cli();
-	printf("Machine Check Exception\n");
+	BSOD();
+	printf("Machine Check Exception");
 	while(1);
 }
 void simd_coprocessor_error()
 {
 	cli();
-	printf("SIMD Floating Point Exception\n");
+	BSOD();
+	printf("SIMD Floating Point Exception");
 	while(1);
 }
 funcarray ehandlers[]=
@@ -166,18 +186,20 @@ void timer_chip()
 }
 void keyboard()
 {
-	//clear();
-	uint8_t temp;
+	asm("pushal"); // WE MUST CHANGE THIS!!!!! (TALK TO BEN)
+	uint16_t temp;
+	
 	cli();
 	temp=inb(0x60);
-	//printf(" temp = %x ",temp);
+	//printf("temp = %x\n",temp);
+	
 	keyboard_input(temp);
 	send_eoi(1);
 	sti();
-
+	asm("popal \n \
+		leave \n \
+		iret");
 	//printf("Keyboard Interrupt; Key Pressed %x\n",temp);
-	//stuff();
-	//terminal_write((uint8_t*)temp,1);
 }
 void rt_clock()
 {
@@ -187,6 +209,10 @@ void rt_clock()
 	outb(0x8C,0x70);
 	inb(0x71);
 	sti();
+	/*
+	background_color();
+	font_color();
+	*/
 	//printf("Real Time Clock Interrupt\n");	
 	//terminal_write((uint8_t*)"test ",5);
 }

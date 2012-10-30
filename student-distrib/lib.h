@@ -18,7 +18,8 @@ void clear(void);
 void BSOD();
 void screen_init();
 void scroll(int offset);
-void stuff();
+void font_color();
+void background_color();
 void test_interrupts(void);
 
 void* memset(void* s, int32_t c, uint32_t n);
