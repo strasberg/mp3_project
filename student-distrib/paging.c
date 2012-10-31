@@ -35,6 +35,8 @@ void paging_init()
 	table_entry[1] |= 3; 
 	table_entry[2] |= 3;
 	
+
+	/*allocate more memory for video memory (scrolling)*/
 	table_entry[0xB8] |= 3;
 	for(i = 0x100; i < 0x400; i++)
 		table_entry[i] |= 3;

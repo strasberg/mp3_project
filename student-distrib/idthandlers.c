@@ -192,15 +192,12 @@ void keyboard()
 	
 	cli();
 	temp=inb(0x60);
-	//printf("temp = %x\n",temp);
-	
-	keyboard_input(temp);
 	send_eoi(1);
 	sti();
+	keyboard_input(temp);
 	asm("popal \n \
 		leave \n \
 		iret");
-	//printf("Keyboard Interrupt; Key Pressed %x\n",temp);
 }
 void rt_clock()
 {
@@ -223,9 +220,6 @@ void rt_clock()
 	{
 		rtc_uie=0;
 	}*/
-	
-	background_color();
-	font_color();
 	
 	asm("popal \n \
 		leave \n \
