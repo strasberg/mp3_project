@@ -7,6 +7,7 @@
 #include "idthandlers.h"
 #include "terminal.h"
 #include "types.h"
+#include "flags.h"
 
 /* Exception Handlers */
 void divide_error()
@@ -203,18 +204,32 @@ void keyboard()
 }
 void rt_clock()
 {
-	//clear();
+	asm("pushal"); // WE MUST CHANGE THIS!!!!! (TALK TO BEN)
+	//uint16_t temp;
+
 	cli();
 	send_eoi(8);
 	outb(0x8C,0x70);
 	inb(0x71);
+	
 	sti();
-	/*
+	//printf("temp = %x\n",temp);
+	/*if(temp==0xC0)
+	{
+		rtc_pie=0;
+		printf("pie\n");
+	}
+	else if(temp==0x90)
+	{
+		rtc_uie=0;
+	}*/
+	
 	background_color();
 	font_color();
-	*/
-	//printf("Real Time Clock Interrupt\n");	
-	//terminal_write((uint8_t*)"test ",5);
+	
+	asm("popal \n \
+		leave \n \
+		iret");
 }
 funcarray irqhandlers[]=
 {

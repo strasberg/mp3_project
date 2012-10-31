@@ -11,6 +11,7 @@
 #include "test.h"
 #include "idthandlers.h"
 #include "paging.h"
+#include "rtc.h"
 
 #include "terminal.h"
 
@@ -273,7 +274,7 @@ entry (unsigned long magic, unsigned long addr)
 	 * without showing you any output */
 	printf("Enabling Interrupts\n");
 	sti();
-
+	printf("CHANGING SMETHING\n");
 	/* This will be replaced by a system call after CP3 */
 	terminal_open();
 	

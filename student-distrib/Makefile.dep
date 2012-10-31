@@ -2,10 +2,11 @@ boot.o: boot.S multiboot.h x86_desc.h types.h
 x86_desc.o: x86_desc.S x86_desc.h types.h
 i8259.o: i8259.c i8259.h types.h lib.h
 idthandlers.o: idthandlers.c lib.h types.h i8259.h idthandlers.h \
-  terminal.h
+  terminal.h flags.h
 kernel.o: kernel.c multiboot.h types.h x86_desc.h lib.h i8259.h debug.h \
-  test.h idthandlers.h paging.h terminal.h
+  test.h idthandlers.h paging.h rtc.h terminal.h
 lib.o: lib.c lib.h types.h
 paging.o: paging.c paging.h types.h
+rtc.o: rtc.c rtc.h lib.h types.h i8259.h flags.h
 terminal.o: terminal.c terminal.h types.h lib.h
 test.o: test.c lib.h types.h test.h
