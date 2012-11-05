@@ -9,23 +9,23 @@
 #define NUM_ROWS 25
 
 static uint8_t ATTRIB;
-static uint32_t cursor_x;
-static uint32_t cursor_y;
-static char* video_mem = (char *)VIDEO;
-static char* saved_video_mem = (char *)SAVED_VIDEO;
-static int32_t screen_offset;
-static uint8_t cursor_enabled;
-void update_color();
-void update_cursor();
+static uint8_t cursor_x; // Keeps track of current column position
+static uint32_t cursor_y; // Keeps track of cursor ofset from beginning of saved video memory
+static char* video_mem = (char *)VIDEO; // Start of video memory (displayed)
+static char* saved_video_mem = (char *)SAVED_VIDEO; // Start of saved video memory (stored)
+static uint32_t screen_offset; // Number of saved offscreen lines
+static uint8_t cursor_enabled; // 1 if cursor is displayed, 0 if not
 
 
-int
+/* Returns cursor column position. */
+uint8_t
 screen_x()
 {
 	return cursor_x;
 }
 
-int
+/* Returns y position of cursor on screen. */
+uint32_t
 screen_y()
 {
 	return cursor_y - screen_offset;
@@ -34,11 +34,18 @@ screen_y()
 /* Courtesy of http://wiki.osdev.org/Text_Mode_Cursor
  * void update_cursor()
  * by Dark Fiber
+ * DESCRIPTION: Changes position of text-mode cursor.
+ * INPUTS: none
+ * OUTPUTS: none
+ * RETURN VALUES: none
+ * SIDE EFFECTS: Enables/disables cursor and updates position.
  */
 void update_cursor()
 {
 	uint8_t cur_CSR;
+	// Checks if cursor is offscreen.
 	if(screen_y() >= NUM_ROWS) {
+		// Checks if cursor needs to be turned off.
 		if(cursor_enabled != 0) {
 			outb(0x0A, 0x3D4);
 			cur_CSR = inb(0x3D5);
@@ -48,6 +55,7 @@ void update_cursor()
 		return;
 	}
 	
+	// Cursor is on screen, check if it needs to be turned on.
 	if(cursor_enabled == 0) {
 		outb(0x0A, 0x3D4);
 		cur_CSR = inb(0x3D5);
@@ -65,6 +73,13 @@ void update_cursor()
 	outb((unsigned char )((position>>8)&0xFF), 0x3D5);
 }
 
+/*
+ * DESCRIPTION: Initializes file-scope variables. 
+ * INPUTS: none
+ * OUTPUTS: none
+ * RETURN VALUES: none
+ * SIDE EFFECTS: Sets video memory and saved video memory.
+ */
 void
 screen_init()
 {
@@ -73,9 +88,11 @@ screen_init()
 	screen_offset = 0;
 	cursor_enabled = 1;
 	update_cursor();
-	ATTRIB = 0x2;
+	ATTRIB = 0x2; // Initialize to green on black.
 	
 	int32_t i;
+	/* Go through all video memory and saved video memory and
+	 * initialize to blank spaces. */
     for(i=0; i<NUM_ROWS*NUM_COLS; i++) {
         *(uint8_t *)(video_mem + (i << 1)) = ' ';
         *(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB;
@@ -87,15 +104,23 @@ screen_init()
 }
 
 
+/* Credit given to Halo 2.
+ * DESCRIPTION: Our blue screen of death implementation. Displayed when
+ *				an exception occurs.
+ * INPUTS: none
+ * OUTPUTS: none
+ * RETURN VALUES: none
+ * SIDE EFFECTS: Changes video memory.
+ */
 void
 BSOD()
 {
 	int32_t i;
     for(i=0; i<NUM_ROWS*NUM_COLS; i++) {
         *(uint8_t *)(video_mem + (i << 1)) = ' ';
-        *(uint8_t *)(video_mem + (i << 1) + 1) = 0x10;
+        *(uint8_t *)(video_mem + (i << 1) + 1) = 0x10; // Blue
 	}
-	ATTRIB = 0x17;
+	ATTRIB = 0x17; // Blue on white
 	cursor_y = screen_offset + 10;
 	cursor_x = 10;
 	puts("A total FU exception has occured at your location. All system");
@@ -121,32 +146,33 @@ BSOD()
 	ATTRIB = 0xF1;
 	
 	/* Disable cursor */
-	uint8_t cur_CSR;
-	outb(0x0A, 0x3D4);
-	cur_CSR = inb(0x3D5);
-	outb(cur_CSR + 0x20, 0x3D5);
-	cursor_enabled = 0;
+	if(cursor_enabled) {
+		uint8_t cur_CSR;
+		outb(0x0A, 0x3D4);
+		cur_CSR = inb(0x3D5);
+		outb(cur_CSR + 0x20, 0x3D5);
+		cursor_enabled = 0;
+	}
 }
 
 
+/*
+ * DESCRIPTION: Clears video memory and sets cursor to top left of screen. 
+ * INPUTS: none
+ * OUTPUTS: none
+ * RETURN VALUES: none
+ * SIDE EFFECTS: Changes video memory.
+ */
 void
 clear(void)
 {
     int32_t i;
 
-	for(i=cursor_x; i<NUM_COLS; i++) {
-		if(screen_y() < NUM_ROWS) {
-			*(uint8_t *)(video_mem + ((NUM_COLS*screen_y() + i) << 1)) = ' ';
-			*(uint8_t *)(video_mem + ((NUM_COLS*screen_y() + i) << 1) + 1) = ATTRIB;
-		}
-		*(uint8_t *)(saved_video_mem + ((NUM_COLS*cursor_y + i) << 1)) = ' ';
-		*(uint8_t *)(saved_video_mem + ((NUM_COLS*cursor_y + i) << 1) + 1) = ATTRIB;
-	}
-
 	cursor_x = 0;
 	cursor_y++;
-	screen_offset = cursor_y;
+	screen_offset = cursor_y; // Moves all saved video memory off screen.
 	update_cursor();
+	// Clears video memory and reflects this in saved video memory. 
     for(i=0; i<NUM_ROWS*NUM_COLS; i++) {
         *(uint8_t *)(video_mem + (i << 1)) = ' ';
         *(uint8_t *)(video_mem + (i << 1) + 1) = ATTRIB;
@@ -157,16 +183,36 @@ clear(void)
 
 }
 
+
+/*
+ * DESCRIPTION: Scrolls up or down based on requested offset.
+ * INPUTS: offset -- change in screen position
+ * OUTPUTS: none
+ * RETURN VALUES: none
+ * SIDE EFFECTS: Changes displayed video memory.
+ */
 void
-scroll(int offset)
+scroll(int32_t offset)
 {
-	if(screen_offset + offset < 0)
-		return;
-	if(screen_offset + offset > cursor_y)
-		return;
+	// If offset is positive, it will scroll down.
+	// If offset is negative, it will scroll up.
+	
+	// Prevents scrolling above saved video memory.
+	if(offset + (int)screen_offset < 0) {
+		if(screen_offset == 0)
+			return;
+		offset = 0 - (int)screen_offset; // Only scroll up enough to reach top, no farther.
+	}
+	// Prevents scrolling below cursor.
+	else if((int)screen_offset + offset > cursor_y) {
+		if(screen_offset == cursor_y)
+			return;
+		offset = cursor_y - (int)screen_offset; // Only scroll down enough to reach cursor.
+	}
 	
 	screen_offset += offset;
 	int i;
+	// Copy saved video memory into displayed video memory.
 	for(i=0; i<NUM_ROWS*NUM_COLS; i++) {
         *(uint8_t *)(video_mem + (i << 1)) =
 			*(uint8_t *)(saved_video_mem + ((NUM_COLS*screen_offset + i) << 1));
@@ -176,7 +222,19 @@ scroll(int offset)
 	update_cursor();
 }
 
+/* Changes font/background colors. */
+void
+update_color() {
+	int32_t i;
+	// Video memory uses pairs of bytes for each block on screen in text mode
+	// We're only setting the second byte to change the font/background color.
+	for(i=0; i<(0x400000-SAVED_VIDEO)/2; i++) {
+        *(uint8_t *)(saved_video_mem + (i << 1) + 1) = ATTRIB;
+	}
+	scroll(0); // Update displayed video memory with new colors.
+}
 
+/* Changes to next font color. Called from terminal.c on F7 press. */
 void
 font_color() {
 	uint8_t color = ATTRIB & 0x7;
@@ -186,6 +244,8 @@ font_color() {
 	update_color();
 }
 
+
+/* Changes to next background color. Called from terminal.c on F8 press. */
 void
 background_color() {
 	uint8_t color = (ATTRIB & 0x70) >> 4;
@@ -195,15 +255,6 @@ background_color() {
 	update_color();
 }
 
-void
-update_color() {
-	int32_t i;
-	
-	for(i=0; i<(0x400000-SAVED_VIDEO)/2; i++) {
-        *(uint8_t *)(saved_video_mem + (i << 1) + 1) = ATTRIB;
-	}
-	scroll(0);
-}
 
 /* Standard printf().
  * Only supports the following format strings:
@@ -350,29 +401,20 @@ puts(int8_t* s)
 void
 putc(uint8_t c)
 {
-	int i;
-
-    if(c == '\n' || c == '\r') {
-	
-		for(i=cursor_x; i<NUM_COLS; i++) {
-			if(screen_y() < NUM_ROWS) {
-				*(uint8_t *)(video_mem + ((NUM_COLS*screen_y() + i) << 1)) = ' ';
-				*(uint8_t *)(video_mem + ((NUM_COLS*screen_y() + i) << 1) + 1) = ATTRIB;
-			}
-			*(uint8_t *)(saved_video_mem + ((NUM_COLS*cursor_y + i) << 1)) = ' ';
-			*(uint8_t *)(saved_video_mem + ((NUM_COLS*cursor_y + i) << 1) + 1) = ATTRIB;
-		}
-	
+	if(c == '\n' || c == '\r') {
         cursor_y++;
         cursor_x=0;
-    } else if(c == '\b') {
-		if(cursor_x == 0) {
+    }
+	// Handles backspace 
+	else if(c == '\b') {
+		if(cursor_x == 0) { // Moves to end of previous row
 			cursor_y--;
 			cursor_x = NUM_COLS - 1;
 		} else {
 			cursor_x--;
 		}
 		
+		// Replace previous displayed character with a space.
 		if(screen_y() < NUM_ROWS) {
 			*(uint8_t *)(video_mem + ((NUM_COLS*screen_y() + screen_x()) << 1)) = ' ';
 			*(uint8_t *)(video_mem + ((NUM_COLS*screen_y() + screen_x()) << 1) + 1) = ATTRIB;
@@ -380,7 +422,9 @@ putc(uint8_t c)
 		*(uint8_t *)(saved_video_mem + ((NUM_COLS*cursor_y + cursor_x) << 1)) = ' ';
 		*(uint8_t *)(saved_video_mem + ((NUM_COLS*cursor_y + cursor_x) << 1) + 1) = ATTRIB;
 		
-	} else {
+	}
+	// Normal character
+	else {
 		if(screen_y() < NUM_ROWS) {
 			*(uint8_t *)(video_mem + ((NUM_COLS*screen_y() + screen_x()) << 1)) = c;
 			*(uint8_t *)(video_mem + ((NUM_COLS*screen_y() + screen_x()) << 1) + 1) = ATTRIB;
@@ -392,8 +436,8 @@ putc(uint8_t c)
         cursor_x %= NUM_COLS;
     }
 	
-	if(cursor_y > screen_offset + NUM_ROWS - 1)
-		scroll(cursor_y - (screen_offset - 1 + NUM_ROWS));
+	if(screen_y() >= NUM_ROWS) // if cursor is offscreen
+		scroll(screen_y() - NUM_ROWS + 1); // Scroll down so cursor is at bottom of screen.
 	else
 		update_cursor();
 }

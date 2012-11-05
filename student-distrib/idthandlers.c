@@ -7,7 +7,7 @@
 #include "idthandlers.h"
 #include "terminal.h"
 #include "types.h"
-#include "flags.h"
+#include "rtc.h"
 
 /* Exception Handlers */
 void divide_error()
@@ -187,40 +187,33 @@ void timer_chip()
 }
 void keyboard()
 {
+	
 	asm("pushal"); // WE MUST CHANGE THIS!!!!! (TALK TO BEN)
 	uint16_t temp;
 	
 	cli();
 	temp=inb(0x60);
 	send_eoi(1);
-	sti();
+	
 	keyboard_input(temp);
+	sti();
 	asm("popal \n \
 		leave \n \
 		iret");
+	
 }
 void rt_clock()
 {
 	asm("pushal"); // WE MUST CHANGE THIS!!!!! (TALK TO BEN)
-	//uint16_t temp;
+	uint8_t temp;
 
 	cli();
-	send_eoi(8);
 	outb(0x8C,0x70);
-	inb(0x71);
-	
+	temp = inb(0x71);
+	rtc_intr(temp);
+	send_eoi(8);
 	sti();
-	//printf("temp = %x\n",temp);
-	/*if(temp==0xC0)
-	{
-		rtc_pie=0;
-		printf("pie\n");
-	}
-	else if(temp==0x90)
-	{
-		rtc_uie=0;
-	}*/
-	
+
 	asm("popal \n \
 		leave \n \
 		iret");

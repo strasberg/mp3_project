@@ -12,9 +12,8 @@
 #include "idthandlers.h"
 #include "paging.h"
 #include "rtc.h"
-
 #include "terminal.h"
-
+#include "filesys.h"
 /* Macros. */
 /* Check if the bit BIT in FLAGS is set. */
 #define CHECK_FLAG(flags,bit)   ((flags) & (1 << (bit)))
@@ -24,10 +23,11 @@
 void
 entry (unsigned long magic, unsigned long addr)
 {
+	uint32_t fileptr;// = 0x40D000; //start of file system
 	multiboot_info_t *mbi;
 
 	/* Initialize the screen. */
-	screen_init();
+	terminal_open();
 
 	/* Am I booted by a Multiboot-compliant boot loader? */
 	if (magic != MULTIBOOT_BOOTLOADER_MAGIC)
@@ -59,6 +59,7 @@ entry (unsigned long magic, unsigned long addr)
 		int mod_count = 0;
 		int i;
 		module_t* mod = (module_t*)mbi->mods_addr;
+		fileptr = mod->mod_start;
 		while(mod_count < mbi->mods_count) {
 			printf("Module %d loaded at address: 0x%#x\n", mod_count, (unsigned int)mod->mod_start);
 			printf("Module %d ends at address: 0x%#x\n", mod_count, (unsigned int)mod->mod_end);
@@ -254,15 +255,6 @@ entry (unsigned long magic, unsigned long addr)
 	 * PIC, any other initialization stuff... */
 	paging_init();
 	
-	//borrowing from http://wiki.osdev.org/RTC
-	//initialize the RTC w/ 500ms frequency
-	//Select Reg A and write Freq
-	outb(0x8A,0x70);
-	outb(0x2f,0x71);
-	//Select Reg B and enable Periodic Interrupt
-	outb(0x8B,0x70);	
-	outb(0x40,0x71);
-	
 	//Enable IRQ interrupts. 
 	enable_irq(8);
 	enable_irq(2);
@@ -274,10 +266,10 @@ entry (unsigned long magic, unsigned long addr)
 	 * without showing you any output */
 	printf("Enabling Interrupts\n");
 	sti();
-	printf("CHANGING SMETHING\n");
 	/* This will be replaced by a system call after CP3 */
-	terminal_open();
-	
+	rtc_open();
+	filesys_init(fileptr); // start of filesystem
+
 	while(1)
 	{
 		
@@ -285,8 +277,8 @@ entry (unsigned long magic, unsigned long addr)
 		uint8_t buf[1024];
 		int cnt = terminal_read(buf, 1024);
 		buf[cnt] = '\0';
-		puts ((uint8_t*)"Looks like you typed: ");
-		puts (buf);
+		puts ((int8_t*)"Typed:    ");
+		puts ((int8_t*)buf);
 		putc('\n');
 		
 	}

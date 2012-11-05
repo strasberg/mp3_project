@@ -12,8 +12,8 @@
  */
 void paging_init()
 {
-	uint32_t * page_directory __attribute__((aligned(4096))) = (uint32_t *) 0x1000;
-	uint32_t * table_entry __attribute__((aligned(4096))) = (uint32_t *) 0x2000;
+	uint32_t * page_directory  = (uint32_t *) 0x1000; //sets psge directory to 2nd page address in first 4mb
+	uint32_t * table_entry = (uint32_t *) 0x2000; //sets page table entries to 3nd page
 
 	int i;
 	uint32_t address = 0;
@@ -45,7 +45,7 @@ void paging_init()
 	page_directory[0] = (uint32_t)table_entry | 3; //show first 4mb exist
 
 	/*set up kernel paging*/
-	page_directory[1] = (uint32_t)(0x400000 | 0x81); //sets page size to 4mb , r/w and present
+	page_directory[1] = (uint32_t)(0x400000 | 0x81); //sets page size to 4mb , r and present
 
 
 
