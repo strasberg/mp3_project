@@ -311,7 +311,7 @@ keyboard_input(uint8_t key)
         // Printable characters
         else {
             // Only allow 1024 characters in buffer.
-			if(line_pos >= 1024)
+			if(line_pos >= 10)
 				return;
 			typed[line_pos] = kbd_data;
 			line_pos++;

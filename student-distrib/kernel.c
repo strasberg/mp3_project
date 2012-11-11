@@ -23,7 +23,7 @@
 void
 entry (unsigned long magic, unsigned long addr)
 {
-	uint32_t fileptr;// = 0x40D000; //start of file system
+	uint32_t fileptr;// start of file system
 	multiboot_info_t *mbi;
 
 	/* Initialize the screen. */
@@ -269,7 +269,7 @@ entry (unsigned long magic, unsigned long addr)
 	/* This will be replaced by a system call after CP3 */
 	rtc_open();
 	filesys_init(fileptr); // start of filesystem
-
+	
 	while(1)
 	{
 		
