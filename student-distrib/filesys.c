@@ -246,3 +246,16 @@ void filesys_init(const uint32_t location)
 	num_inodes = temp[1];
 	data_blocks	= temp[2];
 }
+
+/* 
+ * loader
+ *   DESCRIPTION: loads program into specified address
+ *   INPUTS: inode, address to start loading
+ *   OUTPUTS: loaded program into ram
+ *   RETURN VALUE:bytes loaded
+ *   SIDE EFFECTS: none
+ */
+int32_t load(uint32_t inode, uint32_t address)
+{
+	return read_data(inode, 0, address,  0x400000); //read entire program file
+}

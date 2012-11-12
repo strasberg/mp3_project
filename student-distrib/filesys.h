@@ -34,7 +34,10 @@ int32_t read_dentry_by_name(const uint8_t* fname, dentry_t* dentry);
 /*fill dentry with file name, type, and inode number*/
 int32_t read_dentry_by_index(uint32_t index, dentry_t* dentry);
 /*reads length # of bytes of file from beginning=offset and outputs to buffer*/
-extern int32_t read_data(uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t nbytes);
+int32_t read_data(uint32_t inode, uint32_t offset, uint8_t* buf, uint32_t nbytes);
+
+/*loads program image from disk blocks into contiguous physical memory*/
+extern int32_t load(uint32_t inode_pntr, uint32_t address);
 
 /*******************all directory operations******************************************/
 
@@ -46,4 +49,5 @@ extern int32_t dir_read(uint32_t inode, uint8_t* buf, uint32_t nbytes);
 extern int32_t dir_write(uint32_t inode, const uint8_t* buf, uint32_t nbytes);
 /*does nothing*/
 extern int32_t dir_close(int32_t ignore);
+
 #endif
